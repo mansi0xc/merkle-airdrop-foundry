@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Test, console} from "forge-std/Test.sol";
-import {MerkleAirdrop} from "../src/MerkleAirdrop.sol";
-import {CivetToken} from "../src/CivetToken.sol";
+import { Test, console } from "forge-std/Test.sol";
+import { MerkleAirdrop } from "../src/MerkleAirdrop.sol";
+import { CivetToken } from "../src/CivetToken.sol";
+import { ZkSyncChainChecker } from "lib/foundry-devops/src/ZkSyncChainChecker.sol";
+import { DeployMerkleAirdrop } from "script/DeployMerkleAirdrop.s.sol";
 
-contract MerkleAirdropTest is Test {
+contract MerkleAirdropTest is ZkSyncChainChecker, Test {
     MerkleAirdrop public airdrop;
     CivetToken public token;
 
@@ -22,10 +24,16 @@ contract MerkleAirdropTest is Test {
     uint256 userPrivKey;
 
     function setUp() public {
-        token = new CivetToken();
-        airdrop = new MerkleAirdrop(ROOT, address(token));
-        token.mint(token.owner(), AMOUNT_TO_SEND);
-        token.transfer(address(airdrop), AMOUNT_TO_SEND);
+        if (!isZkSyncChain()) {
+            console.log("Not on zkSync");
+            DeployMerkleAirdrop deployer = new DeployMerkleAirdrop();
+            (airdrop, token) = deployer.deployMerkleAirdrop();
+        } else {
+            token = new CivetToken();
+            airdrop = new MerkleAirdrop(ROOT, address(token));
+            token.mint(token.owner(), AMOUNT_TO_SEND);
+            token.transfer(address(airdrop), AMOUNT_TO_SEND);
+        }
         (user, userPrivKey) = makeAddrAndKey("user");
     }
 
